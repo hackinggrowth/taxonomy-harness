@@ -1,0 +1,12 @@
+event_name,property_name,property_type,description,owner
+signup,source,string,,growth
+signup,email,string,User email address,growth
+signup,plan,string,Selected plan,growth
+register,source,string,Acquisition channel,
+complete_signup,utm_source,string,UTM source,growth
+view_pricing,type,string,,marketing
+pricing_viewed,page_type,string,Page type,marketing
+purchase_completed,price,number,Transaction value,revenue
+purchase_completed,user_email,string,User email address,revenue
+invite_sent,status,string,Invite state,product
+onboarding_complete,status,boolean,Whether onboarding is complete,product

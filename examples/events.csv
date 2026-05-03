@@ -1,0 +1,10 @@
+event_name,description,owner,status,volume_30d
+signup,,growth,active,1200
+register,User creates an account,,active,180
+complete_signup,User finishes account creation,growth,active,980
+view_pricing,User views pricing page,growth,active,2400
+pricing_viewed,User views pricing page,marketing,active,900
+purchase_completed,User completes paid purchase,revenue,active,140
+invite_sent,User sends a team invite,product,active,220
+onboarding_complete,User completes onboarding,product,active,760
+old_signup,Deprecated signup event,,deprecated,12

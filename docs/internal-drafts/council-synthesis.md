@@ -1,8 +1,6 @@
 # Council Synthesis — Taxonomy Harness
 
 - **Date:** 2026-05-03
-- **Telegram topic:** 🧬 Taxonomy Harness / AI 분석 준비도
-- **Topic ID:** 3624
 - **Status:** Initial council synthesis complete
 
 ## 1. Council Status
