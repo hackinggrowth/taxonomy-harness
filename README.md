@@ -144,6 +144,17 @@ This is useful for teams that:
 - **Docs / 문서**: architecture, privacy model, Mixpanel MCP guidance, rubric, roadmap.  
   아키텍처, privacy model, Mixpanel MCP 가이드, 루브릭, 로드맵.
 
+
+---
+
+## Sample report / 리포트 샘플
+
+![AI Analytics Readiness Report sample](assets/ai-readiness-report-sample.png)
+
+This sample illustrates the intended output shape: a directional readiness score, dimension-level diagnosis, top taxonomy risks, AI analyst validation questions, and a practical cleanup pipeline.
+
+이 샘플은 Taxonomy Harness가 지향하는 산출물 형태를 보여줍니다. 전체 readiness score, dimension별 진단, 주요 taxonomy risk, AI analyst validation question, 그리고 실제 cleanup pipeline을 한 장으로 정리합니다.
+
 ---
 
 ## Quick start / 빠른 시작
