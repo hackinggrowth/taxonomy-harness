@@ -73,6 +73,62 @@ Taxonomy Harness는 바로 그 목적을 위해 만들어졌습니다.
 
 ---
 
+## Scope: what this checks / 범위: 무엇을 점검하는가
+
+### EN
+
+Taxonomy Harness is a **preflight checker for Mixpanel Lexicon / event dictionary exports**. It checks whether your analytics vocabulary is readable, consistent, and safe enough for AI-assisted analytics workflows.
+
+It checks:
+
+- Event names that are hard for humans or AI to distinguish.
+- Missing or weak event/property descriptions.
+- Generic property names such as `source`, `type`, or `status`.
+- Inconsistent property types across events.
+- Deprecated events that still appear active when volume metadata is available.
+- PII-risk candidates such as email, phone, address, birthday, or identifier-like fields.
+- Optional governance gaps such as missing owners, when owner fields exist in the export.
+
+It does **not** check:
+
+- Duplicate event firing in production.
+- Null rates, value distributions, or property cardinality.
+- Timestamp quality.
+- Identity stitching.
+- Event volume anomalies.
+- Whether instrumentation code is implemented correctly.
+- Legal/privacy compliance. PII findings are candidates for review, not compliance determinations.
+
+Those checks belong in a separate **Tracking QA Harness** for raw event exports and implementation health.
+
+### KR
+
+Taxonomy Harness는 **Mixpanel Lexicon / 이벤트 사전 export를 위한 사전 점검 도구**입니다. 이벤트 사전이 AI-assisted analytics workflow에서 읽을 수 있을 만큼 명확하고 일관적이며 안전한지 확인합니다.
+
+점검하는 것:
+
+- 사람이나 AI가 구분하기 어려운 이벤트 이름
+- 누락되었거나 약한 이벤트/property 설명
+- `source`, `type`, `status`처럼 모호한 property 이름
+- 이벤트별 property type 불일치
+- volume metadata가 있을 때 여전히 발생하는 deprecated event
+- email, phone, address, birthday, identifier 계열의 PII-risk 후보
+- owner 필드가 export에 있을 때 owner 누락 같은 governance gap
+
+점검하지 않는 것:
+
+- production에서의 중복 이벤트 전송
+- null rate, value distribution, property cardinality
+- timestamp 품질
+- identity stitching
+- event volume anomaly
+- instrumentation code 구현 정확성
+- 법률/개인정보 compliance 판정. PII 결과는 검토 후보이지 compliance 결론이 아닙니다.
+
+이런 raw event / implementation health 검사는 별도 **Tracking QA Harness**로 분리하는 것이 맞습니다.
+
+---
+
 ## What Taxonomy Harness does / 무엇을 하는가
 
 ### EN

@@ -1,0 +1,6 @@
+event_name,property_name,property_type,description
+request_demo,request_email,string,Email submitted for demo request
+request_demo,button_name,string,Button label clicked
+demo_request,page_name,string,Page where request occurred
+email_open,email,string,Recipient email
+email_send,section_name,string,Email template section

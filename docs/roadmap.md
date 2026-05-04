@@ -6,12 +6,21 @@ Export-first validation, scoring, report generation, Claude Skill, workshop temp
 
 ## 0.2
 
-Canonical map generator, richer duplicate detection, validation question coverage checks.
+- Handle Mixpanel Lexicon exports without owner fields.
+- Reduce PII false positives with token-based matching and allowlists.
+- Conservative similar-event detection with confidence levels.
+- Score breakdown by category and skipped-check reporting.
+- Regression fixtures from real messy Lexicon feedback.
 
 ## 0.3
 
-Read-only Mixpanel MCP prompt pack and demo workflow.
+- Business-question-driven ambiguity checks.
+- Canonical map generator.
+- Read-only Mixpanel MCP prompt pack and demo workflow.
 
 ## Later
 
-Amplitude/GA4 adapters, warehouse export support, and benchmark datasets.
+- Separate Tracking QA Harness for raw event export validation.
+- Amplitude/GA4 adapters.
+- Warehouse export support.
+- Benchmark datasets.

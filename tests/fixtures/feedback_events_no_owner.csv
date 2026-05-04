@@ -1,0 +1,5 @@
+event_name,description,status,volume_30d
+request_demo,User requests a product demo,active,50
+demo_request,User requests a product demo,active,45
+email_open,User opens an email,active,300
+email_send,System sends an email,active,280
