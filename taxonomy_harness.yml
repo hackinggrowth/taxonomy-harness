@@ -1,0 +1,76 @@
+# Taxonomy Harness configuration
+# Defaults are conservative for Mixpanel Lexicon / event dictionary exports.
+
+score_weights:
+  coverage: 30
+  clarity: 30
+  consistency: 25
+  governance: 15
+
+required_fields:
+  events:
+    - event_name
+    - description
+    - status
+  properties:
+    - event_name
+    - property_name
+    - property_type
+    - description
+
+optional_fields:
+  owner_required: false
+
+pii:
+  high_confidence_tokens:
+    - email
+    - phone
+    - address
+    - birthday
+    - birthdate
+    - ssn
+    - ip
+    - ip_address
+    - resident_id
+    - passport
+    - credit_card
+    - card_number
+    - user_email
+  allowlist:
+    - button_name
+    - page_name
+    - section_name
+    - screen_name
+    - campaign_name
+    - experiment_name
+    - plan_name
+    - product_name
+    - company_name
+
+similarity:
+  threshold: 0.86
+  weak_threshold: 0.78
+  action_verbs:
+    - add
+    - begin
+    - cancel
+    - click
+    - complete
+    - create
+    - delete
+    - finish
+    - open
+    - purchase
+    - register
+    - request
+    - send
+    - signup
+    - start
+    - submit
+    - update
+    - view
+  synonym_groups:
+    - [signup, register]
+    - [complete, finish, completed, finished]
+    - [view, viewed, open, opened]
+    - [request, requested, submit, submitted]
