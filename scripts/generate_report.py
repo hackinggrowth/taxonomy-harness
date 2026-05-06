@@ -18,11 +18,16 @@ def read_issues(path: Path) -> list[dict[str, str]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate AI analytics readiness Markdown report.")
-    parser.add_argument("--score", required=True, help="Readiness score JSON")
-    parser.add_argument("--issues", required=True, help="Issue CSV")
+    parser.add_argument("--input", dest="metadata_alias", help="Optional validation metadata for provenance; score/issues still come from generated artifacts")
+    parser.add_argument("--score", default="outputs/readiness_score.json", help="Readiness score JSON")
+    parser.add_argument("--issues", default="outputs/issues.csv", help="Issue CSV")
     parser.add_argument("--questions", required=False, help="Business questions Markdown")
-    parser.add_argument("--out", default="outputs/ai_readiness_report.md", help="Output report Markdown path")
+    parser.add_argument("--out", "--output", dest="out", default="outputs/ai_readiness_report.md", help="Output report Markdown path")
     args = parser.parse_args()
+
+    metadata_path = Path(args.metadata_alias) if args.metadata_alias else None
+    if metadata_path and not metadata_path.exists():
+        raise SystemExit(f"Validation metadata file not found: {metadata_path}")
 
     score_path = Path(args.score)
     if not score_path.exists():
@@ -41,7 +46,15 @@ def main() -> None:
     )
     dims = score["dimensions"]
     skipped = score.get("skipped_checks", [])
+    workflow = score.get("closed_loop_workflow", [])
+    workflow_rows = "\n".join(
+        f"| {step.get('stage', '')} | {step.get('artifact', '')} | {step.get('decision', '')} |"
+        for step in workflow
+    )
+    iteration = score.get("iteration_metrics", {})
+    success = score.get("success_metrics", {})
     skipped_rows = "\n".join(f"- {item}" for item in skipped) if skipped else "- None"
+    provenance = f"- Validation metadata: `{metadata_path}`" if metadata_path else "- Validation metadata: not provided"
 
     report = f"""# AI Analytics Readiness Report
 
@@ -49,12 +62,27 @@ def main() -> None:
 
 This report checks **Mixpanel Lexicon / event dictionary readiness** for AI-assisted analytics. It does **not** validate raw event delivery, duplicate firing, null rates, timestamp quality, identity stitching, or production volume anomalies.
 
+## Closed-Loop Workflow
+
+Taxonomy Harness is meant to be run as a closed loop: **ingest → classify → review → measure → iterate**. The scripts produce the observed issue log and score; humans approve taxonomy decisions before the next export is measured again.
+
+| Stage | Artifact | Human decision |
+|---|---|---|
+{workflow_rows if workflow_rows else '| ingest | CSV exports | Confirm scope |'}
+
 ## Summary
 
+{provenance}
 - Overall score: **{score['overall_score']} / 100**
 - Readiness level: **{score['readiness_level']}**
 - Inputs: {score['inputs']['events']} events, {score['inputs']['properties']} custom properties, {score['inputs']['issues']} issues
 - Severity counts: high={by_severity['high']}, medium={by_severity['medium']}, low={by_severity['low']}
+
+## Success Metrics For This Iteration
+
+- Ready threshold met: **{iteration.get('ready_score_threshold_met', False)}** (target score ≥ {success.get('minimum_ready_score', 75)})
+- High-confidence high issues: **{iteration.get('high_confidence_high_issues', 0)}** (target ≤ {success.get('target_high_confidence_high_issues', 0)})
+- Missing required descriptions: **{iteration.get('missing_required_descriptions', 0)}** (target ≤ {success.get('target_missing_required_descriptions', 0)})
 
 ## Dimension Scores
 
@@ -93,7 +121,7 @@ PII findings are **PII-risk candidates**, not legal or compliance determinations
 
 ## Recommended Next Step
 
-Run a 90-minute decision session to choose canonical funnel events, assign owners where useful, and mark deprecated events for migration.
+Review the top findings, approve a small cleanup batch in Mixpanel Lexicon, export the taxonomy again, and re-run the harness to measure movement.
 """
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

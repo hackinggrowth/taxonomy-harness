@@ -135,13 +135,13 @@ Taxonomy Harness는 **Mixpanel Lexicon / 이벤트 사전 export를 위한 사�
 
 Taxonomy Harness helps teams turn messy tracking data into an AI-readable analytics contract.
 
-It provides a repeatable pipeline:
+It provides a repeatable closed-loop workflow:
 
 1. **Ingest** — collect event inventory, property dictionary, tracking plan, and business questions.
-2. **Detect** — find missing definitions, duplicate-like events, generic properties, inconsistent types, PII-risk fields, and owner gaps.
-3. **Normalize** — draft canonical event names, property semantics, and funnel definitions.
-4. **Validate** — test whether important business questions can be answered unambiguously.
-5. **Package** — generate an AI readiness report, issue log, decision log, and workshop materials.
+2. **Classify** — run deterministic checks that separate observed taxonomy issues from inferred recommendations.
+3. **Review** — use the issue log in a human decision session to choose canonical events, owners, and accepted exceptions.
+4. **Measure** — generate readiness scores and iteration metrics that show whether the taxonomy is safe enough for AI analyst workflows.
+5. **Iterate** — apply approved Lexicon cleanup outside this repo, export again, and re-run the harness to measure movement.
 
 The goal is not to create a perfect universal taxonomy. The goal is to create a clear enough contract so humans and AI can reason from the same definitions.
 
@@ -224,9 +224,17 @@ bash scripts/demo_run.sh
 Run checks manually / 수동 실행:
 
 ```bash
-python3 scripts/validate_taxonomy.py --events examples/events.csv --properties examples/properties.csv --out outputs/issues.csv
-python3 scripts/score_readiness.py --events examples/events.csv --properties examples/properties.csv --issues outputs/issues.csv --out outputs/readiness_score.json
+python3 scripts/validate_taxonomy.py --events examples/events.csv --properties examples/properties.csv --questions examples/business_questions.md --out outputs/issues.csv --metadata-out outputs/validation_metadata.json
+python3 scripts/score_readiness.py --events examples/events.csv --properties examples/properties.csv --issues outputs/issues.csv --metadata outputs/validation_metadata.json --out outputs/readiness_score.json
 python3 scripts/generate_report.py --score outputs/readiness_score.json --issues outputs/issues.csv --questions examples/business_questions.md --out outputs/ai_readiness_report.md
+```
+
+Shortcut aliases for the demo artifacts are also supported:
+
+```bash
+python3 scripts/validate_taxonomy.py --input examples/events.csv --properties examples/properties.csv
+python3 scripts/score_readiness.py --input outputs/validation_metadata.json
+python3 scripts/generate_report.py --input outputs/validation_metadata.json --output outputs/ai_readiness_report.md
 ```
 
 ---
@@ -274,12 +282,24 @@ MVP는 **export-first**입니다. Mixpanel에 직접 연결하거나 tracking pl
 
 ---
 
+## Success metrics / 성공 기준
+
+The default MVP success metrics are intentionally practical and configurable in `taxonomy_harness.yml`:
+
+- Overall readiness score is at least **75**.
+- High-confidence, high-severity taxonomy issues are reduced to **0** or explicitly accepted by humans.
+- Required event/property descriptions are no longer missing.
+- The team can answer its top business questions from shared event definitions, not tribal knowledge.
+
+These metrics are not a universal benchmark. They are a lightweight way to measure whether each cleanup iteration made the taxonomy easier for humans and AI to read.
+
 ## Non-goals / 하지 않는 것
 
 This repo intentionally does **not** provide / 이 repo는 의도적으로 다음을 제공하지 않습니다:
 
 - A web app or SaaS dashboard. / 웹앱 또는 SaaS 대시보드
 - Automatic taxonomy rewrite or mutation. / 자동 taxonomy rewrite 또는 운영 시스템 변경
+- Raw tracking QA or instrumentation validation. / raw event QA 또는 instrumentation 검증
 - A universal “correct taxonomy” generator. / 범용 “정답 taxonomy” 생성기
 - Live write access to analytics tools. / 분석 도구에 대한 live write access
 - Customer-specific private examples. / 특정 고객의 private example
