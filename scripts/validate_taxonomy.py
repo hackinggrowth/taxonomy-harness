@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 from collections import defaultdict
 from difflib import SequenceMatcher
@@ -68,6 +69,96 @@ SYNONYM_GROUPS = [
     {"view", "viewed", "open", "opened"},
     {"request", "requested", "submit", "submitted"},
 ]
+
+
+def _parse_scalar(value: str) -> Any:
+    value = value.strip()
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    try:
+        return int(value)
+    except ValueError:
+        return value.strip("\"'")
+
+
+def load_config(path: Path) -> dict[str, Any]:
+    """Load the small project YAML config without adding a runtime dependency."""
+    if not path.exists():
+        return {}
+    lines = path.read_text(encoding="utf-8").splitlines()
+    root: dict[str, Any] = {}
+    stack: list[tuple[int, Any]] = [(-1, root)]
+
+    def next_line_is_list(index: int, current_indent: int) -> bool:
+        for candidate in lines[index + 1 :]:
+            if not candidate.strip() or candidate.lstrip().startswith("#"):
+                continue
+            indent = len(candidate) - len(candidate.lstrip(" "))
+            return indent > current_indent and candidate.strip().startswith("- ")
+        return False
+
+    for index, raw_line in enumerate(lines):
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+        parent = stack[-1][1]
+        if line.startswith("- "):
+            if not isinstance(parent, list):
+                raise SystemExit(f"Unsupported config shape near: {raw_line}")
+            item_text = line[2:].strip()
+            if item_text.startswith("[") and item_text.endswith("]"):
+                parent.append([part.strip().strip("\"'") for part in item_text[1:-1].split(",") if part.strip()])
+            else:
+                parent.append(_parse_scalar(item_text))
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if value:
+            parent[key] = _parse_scalar(value)
+            continue
+        container: Any = [] if next_line_is_list(index, indent) else {}
+        parent[key] = container
+        stack.append((indent, container))
+    return root
+
+
+def apply_config(config: dict[str, Any]) -> None:
+    """Apply validator settings from taxonomy_harness.yml."""
+    global PII_TOKENS, PII_ALLOWLIST, ACTION_VERBS, SYNONYM_GROUPS
+    pii = config.get("pii", {})
+    similarity = config.get("similarity", {})
+    if pii.get("high_confidence_tokens"):
+        PII_TOKENS = set(pii["high_confidence_tokens"])
+    if pii.get("allowlist"):
+        PII_ALLOWLIST = set(pii["allowlist"])
+    if similarity.get("action_verbs"):
+        ACTION_VERBS = set(similarity["action_verbs"])
+    if similarity.get("synonym_groups"):
+        SYNONYM_GROUPS = [set(group) for group in similarity["synonym_groups"]]
+
+
+def workflow_metadata() -> dict[str, Any]:
+    return {
+        "closed_loop_workflow": [
+            {"stage": "ingest", "artifact": "events/properties/questions exports", "decision": "Confirm the export scope and optional fields."},
+            {"stage": "classify", "artifact": "outputs/issues.csv", "decision": "Separate observed issues from inferred cleanup recommendations."},
+            {"stage": "review", "artifact": "human decision session", "decision": "Choose canonical events, owners, and accepted exceptions."},
+            {"stage": "measure", "artifact": "outputs/readiness_score.json", "decision": "Track score movement and unresolved high-risk issue count."},
+            {"stage": "iterate", "artifact": "next taxonomy export", "decision": "Re-run the harness after approved Lexicon edits."},
+        ],
+        "success_metrics": {
+            "minimum_ready_score": 75,
+            "target_high_confidence_high_issues": 0,
+            "target_missing_required_descriptions": 0,
+            "recommended_review_cadence": "Re-run after each approved taxonomy cleanup batch.",
+        },
+    }
 
 
 def read_csv(path: Path, required: list[str]) -> tuple[list[dict[str, str]], list[str]]:
@@ -203,8 +294,11 @@ def write_issues(path: Path, issues: list[dict[str, str]]) -> None:
         writer.writerows(issues)
 
 
-def write_metadata(path: Path, capabilities: dict[str, bool], events: list[dict[str, str]], properties: list[dict[str, str]]) -> None:
+def write_metadata(path: Path, capabilities: dict[str, bool], events: list[dict[str, str]], properties: list[dict[str, str]], config_path: Path, config: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    configured_success_metrics = config.get("success_metrics", {})
+    workflow = workflow_metadata()
+    workflow["success_metrics"].update(configured_success_metrics)
     data: dict[str, Any] = {
         "scope": "Mixpanel Lexicon / event dictionary readiness; not raw event QA",
         "inputs": {
@@ -214,6 +308,9 @@ def write_metadata(path: Path, capabilities: dict[str, bool], events: list[dict[
         },
         "capabilities": capabilities,
         "skipped_checks": [],
+        "config": {"path": str(config_path), "loaded": config_path.exists()},
+        "score_weights": config.get("score_weights", {}),
+        **workflow,
     }
     if not capabilities["has_owner_field"]:
         data["skipped_checks"].append("owner_governance: owner column not present")
@@ -221,19 +318,28 @@ def write_metadata(path: Path, capabilities: dict[str, bool], events: list[dict[
         data["skipped_checks"].append("answerability: business questions not provided")
     if not capabilities["has_property_types"]:
         data["skipped_checks"].append("property_type_consistency: property_type column not present")
-    import json
-
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate event taxonomy CSV exports.")
-    parser.add_argument("--events", required=True, help="Path to event inventory CSV")
+    parser.add_argument("--input", dest="events_alias", help="Alias for --events for quick demo workflows")
+    parser.add_argument("--events", required=False, help="Path to event inventory CSV")
     parser.add_argument("--properties", required=True, help="Path to property dictionary CSV")
     parser.add_argument("--out", default="outputs/issues.csv", help="Output issue CSV path")
     parser.add_argument("--metadata-out", default="outputs/validation_metadata.json", help="Output validation metadata JSON path")
     parser.add_argument("--questions", required=False, help="Optional business questions Markdown path")
+    parser.add_argument("--config", default="taxonomy_harness.yml", help="Validator configuration path")
     args = parser.parse_args()
+
+    if args.events_alias:
+        args.events = args.events_alias
+    if not args.events:
+        raise SystemExit("Provide --events or --input")
+
+    config_path = Path(args.config)
+    config = load_config(config_path)
+    apply_config(config)
 
     events, event_fields = read_csv(Path(args.events), BASE_EVENT_FIELDS)
     properties, property_fields = read_csv(Path(args.properties), BASE_PROPERTY_FIELDS)
@@ -241,7 +347,7 @@ def main() -> None:
     capabilities = detect_capabilities(event_fields, property_fields, has_questions)
     issues = find_issues(events, properties, capabilities)
     write_issues(Path(args.out), issues)
-    write_metadata(Path(args.metadata_out), capabilities, events, properties)
+    write_metadata(Path(args.metadata_out), capabilities, events, properties, config_path, config)
     high = sum(1 for i in issues if i["severity"] == "high")
     medium = sum(1 for i in issues if i["severity"] == "medium")
     low = sum(1 for i in issues if i["severity"] == "low")

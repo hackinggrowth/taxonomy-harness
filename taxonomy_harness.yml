@@ -74,3 +74,8 @@ similarity:
     - [complete, finish, completed, finished]
     - [view, viewed, open, opened]
     - [request, requested, submit, submitted]
+
+success_metrics:
+  minimum_ready_score: 75
+  target_high_confidence_high_issues: 0
+  target_missing_required_descriptions: 0

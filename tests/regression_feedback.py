@@ -68,4 +68,7 @@ score = json.loads(score_path.read_text(encoding="utf-8"))
 assert score["overall_score"] > 0
 assert "owner_governance: owner column not present" in score["skipped_checks"]
 assert "answerability: business questions not provided" in score["skipped_checks"]
+assert [step["stage"] for step in score["closed_loop_workflow"]] == ["ingest", "classify", "review", "measure", "iterate"]
+assert score["success_metrics"]["minimum_ready_score"] == 75
+assert "high_confidence_high_issues" in score["iteration_metrics"]
 print("feedback regression checks passed")
